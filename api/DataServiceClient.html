@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DataServiceClient — DataService API</title>
+<link rel="stylesheet" href="../style.css"/>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="topbar-logo" href="../index.html">DataService</a>
+  <span class="topbar-sep">/</span>
+  <span class="topbar-page">DataServiceClient</span>
+  <nav class="topbar-nav">
+    <a href="DataServiceServer.html">DataServiceServer</a>
+    <a href="DataServiceClient.html" class="active">DataServiceClient</a>
+  </nav>
+</header>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-group">
+      <div class="sidebar-label">Data</div>
+      <a class="sidebar-item" href="#get">get</a>
+      <a class="sidebar-item" href="#fetch">fetch</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-label">Reactive</div>
+      <a class="sidebar-item" href="#onChange">onChange</a>
+      <a class="sidebar-item" href="#onChanged">onChanged</a>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <div class="class-header">
+      <h1>DataServiceClient</h1>
+      <p>Client-side API for reading replicated player data and reacting to changes. All values are a mirror of what the server last wrote — no DataStore access happens on the client.</p>
+      <div class="class-env">💻&nbsp; Client &nbsp;·&nbsp; <code>require(DataService).client</code></div>
+    </div>
+
+    <!-- ════════ DATA ════════ -->
+    <div class="section-title">Data</div>
+
+    <div class="method" id="get">
+      <div class="method-header">
+        <span class="method-name">get</span>
+      </div>
+      <div class="sig"><span class="s-fn">DataServiceClient</span><span class="s-op">:</span><span class="s-fn">get</span>(<span class="s-p">path</span><span class="s-opt">?</span>: <span class="s-t">Path</span>) <span class="s-op">→</span> <span class="s-ret">any</span></div>
+      <div class="desc">
+        <p>Returns the local player's in-memory data. Omit <code>path</code> for the full data table. <code>path</code> accepts a <strong>string</strong> key or an <strong>array of strings</strong> for nested access.</p>
+        <div class="adm adm-note"><strong>Note:</strong> Data is available immediately after the server's initial replication fires. Use <a href="#fetch"><code>fetch</code></a> if you need to wait for it.</div>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">path</span> <span class="po">optional</span></td><td><span class="pt">string | {string}</span></td><td class="pd">Key or nested path. Omit for the full data table.</td></tr>
+        </tbody>
+      </table>
+      <div class="returns"><span class="rl">Returns</span> <span class="rt">any</span></div>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="cmt">-- Full snapshot</span>
+<span class="kw">local</span> data = <span class="fn">DataServiceClient</span>:<span class="fn">get</span>()
+
+<span class="cmt">-- Single field</span>
+<span class="kw">local</span> coins = <span class="fn">DataServiceClient</span>:<span class="fn">get</span>(<span class="str">"Coins"</span>)
+
+<span class="cmt">-- Nested path</span>
+<span class="kw">local</span> wins = <span class="fn">DataServiceClient</span>:<span class="fn">get</span>({<span class="str">"Stats"</span>, <span class="str">"Wins"</span>})</pre>
+      </div>
+    </div>
+
+    <div class="method" id="fetch">
+      <div class="method-header">
+        <span class="method-name">fetch</span>
+        <div class="tags"><span class="tag tag-yields">yields</span></div>
+      </div>
+      <div class="sig"><span class="s-fn">DataServiceClient</span><span class="s-op">:</span><span class="s-fn">fetch</span>(<span class="s-p">path</span><span class="s-opt">?</span>: <span class="s-t">Path</span>) <span class="s-op">→</span> <span class="s-ret">any</span></div>
+      <div class="desc">
+        <p>Yields until the initial data replication from the server has arrived, then returns data at <code>path</code> (or the full table if omitted). Safe to call at the very top of a LocalScript.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">path</span> <span class="po">optional</span></td><td><span class="pt">string | {string}</span></td><td class="pd">Key or nested path. Omit for the full table.</td></tr>
+        </tbody>
+      </table>
+      <div class="returns"><span class="rl">Returns</span> <span class="rt">any</span></div>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="cmt">-- Safe at the top of a LocalScript before data arrives</span>
+<span class="kw">local</span> coins = <span class="fn">DataServiceClient</span>:<span class="fn">fetch</span>(<span class="str">"Coins"</span>)
+<span class="fn">print</span>(coins)</pre>
+      </div>
+    </div>
+    <hr class="divider"/>
+
+    <!-- ════════ REACTIVE ════════ -->
+    <div class="section-title">Reactive</div>
+
+    <div class="method" id="onChange">
+      <div class="method-header">
+        <span class="method-name">onChange</span>
+      </div>
+      <div class="sig"><span class="s-fn">DataServiceClient</span><span class="s-op">:</span><span class="s-fn">onChange</span>(<span class="s-p">path</span>: <span class="s-t">Path</span>, <span class="s-p">callback</span>: <span class="s-t">(new: any, old: any) → ()</span>) <span class="s-op">→</span> <span class="s-ret">RBXScriptConnection</span></div>
+      <div class="desc">
+        <p>Fires <code>callback</code> whenever the value at <code>path</code> changes due to a server replication. Receives the new value and the previous value. Returns a connection that can be <code>:Disconnect()</code>-ed.</p>
+        <div class="adm adm-note"><strong>Note:</strong> Subscribes to the exact path. Watching a parent path does <em>not</em> fire when a child key changes — subscribe to the leaf you care about.</div>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">path</span></td><td><span class="pt">string | {string}</span></td><td class="pd">Key or nested path to watch.</td></tr>
+          <tr><td><span class="pn">callback</span></td><td><span class="pt">(new: any, old: any) → ()</span></td><td class="pd">Called with the new and previous values.</td></tr>
+        </tbody>
+      </table>
+      <div class="returns"><span class="rl">Returns</span> <span class="rt">RBXScriptConnection</span></div>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="kw">local</span> conn = <span class="fn">DataServiceClient</span>:<span class="fn">onChange</span>(<span class="str">"Coins"</span>, <span class="kw">function</span>(new, old)
+    <span class="fn">print</span>(<span class="str">"Coins:"</span>, old, <span class="str">"→"</span>, new)
+<span class="kw">end</span>)
+
+<span class="cmt">-- Disconnect when no longer needed</span>
+conn:<span class="fn">Disconnect</span>()</pre>
+      </div>
+    </div>
+
+    <div class="method" id="onChanged">
+      <div class="method-header">
+        <span class="method-name">onChanged</span>
+        <div class="tags"><span class="tag tag-override">alias</span></div>
+      </div>
+      <div class="sig"><span class="s-fn">DataServiceClient</span><span class="s-op">:</span><span class="s-fn">onChanged</span>(<span class="s-p">path</span>: <span class="s-t">Path</span>, <span class="s-p">callback</span>: <span class="s-t">(new: any, old: any) → ()</span>) <span class="s-op">→</span> <span class="s-ret">RBXScriptConnection</span></div>
+      <div class="desc">
+        <p>Alias for <a href="#onChange"><code>onChange</code></a>. Identical behaviour.</p>
+      </div>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua — watch multiple fields</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="fn">DataServiceClient</span>:<span class="fn">onChanged</span>(<span class="str">"Coins"</span>, <span class="kw">function</span>(new, old)
+    <span class="cmt">-- update coin display</span>
+<span class="kw">end</span>)
+
+<span class="fn">DataServiceClient</span>:<span class="fn">onChanged</span>(<span class="str">"Level"</span>, <span class="kw">function</span>(new, old)
+    <span class="cmt">-- update level display</span>
+<span class="kw">end</span>)
+
+<span class="fn">DataServiceClient</span>:<span class="fn">onChanged</span>(<span class="str">"Inventory"</span>, <span class="kw">function</span>(new, old)
+    <span class="cmt">-- refresh inventory UI</span>
+<span class="kw">end</span>)</pre>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../runtime.js"></script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DataService — API Reference</title>
+<link rel="stylesheet" href="style.css"/>
+<style>
+  .home { max-width: 680px; margin: 80px auto; padding: 0 32px; }
+  .home h1 { font-size: 36px; font-weight: 800; margin-bottom: 12px; }
+  .home p { color: var(--subtext0); font-size: 16px; line-height: 1.7; margin-bottom: 32px; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card {
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; text-decoration: none; color: inherit;
+    transition: all .15s; display: block; background: var(--mantle);
+  }
+  .card:hover { border-color: var(--blue); box-shadow: 0 4px 20px rgba(137,180,250,.15); }
+  .card-icon { font-size: 28px; margin-bottom: 12px; }
+  .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+  .card p { font-size: 13px; color: var(--subtext0); margin: 0; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="topbar-logo" href="index.html">DataService</a>
+  <nav class="topbar-nav">
+    <a href="api/DataServiceServer.html">DataServiceServer</a>
+    <a href="api/DataServiceClient.html">DataServiceClient</a>
+  </nav>
+</header>
+<div class="home" style="padding-top:calc(52px + 60px)">
+  <h1>DataService API</h1>
+  <p>A persistent, reactive player data library for Roblox. Handles saving, replication, cross-server messaging, and leaderboards out of the box.</p>
+  <div class="cards">
+    <a class="card" href="api/DataServiceServer.html">
+      <div class="card-icon">🖥️</div>
+      <h2>DataServiceServer</h2>
+      <p>Server-side API — manage player data, bridge, and leaderboards.</p>
+    </a>
+    <a class="card" href="api/DataServiceClient.html">
+      <div class="card-icon">🖥️</div>
+      <h2>DataServiceClient</h2>
+      <p>Client-side API — read replicated data and listen to changes.</p>
+    </a>
+  </div>
+</div>
+</body>
+</html>

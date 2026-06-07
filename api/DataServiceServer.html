@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DataServiceServer — DataService API</title>
+<link rel="stylesheet" href="../style.css"/>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="topbar-logo" href="../index.html">DataService</a>
+  <span class="topbar-sep">/</span>
+  <span class="topbar-page">DataServiceServer</span>
+  <nav class="topbar-nav">
+    <a href="DataServiceServer.html" class="active">DataServiceServer</a>
+    <a href="DataServiceClient.html">DataServiceClient</a>
+  </nav>
+</header>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-group">
+      <div class="sidebar-label">Player</div>
+      <a class="sidebar-item" href="#loadPlayer">loadPlayer</a>
+      <a class="sidebar-item" href="#removePlayer">removePlayer</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-label">Data</div>
+      <a class="sidebar-item" href="#get">get</a>
+      <a class="sidebar-item" href="#set">set</a>
+      <a class="sidebar-item" href="#update">update</a>
+      <a class="sidebar-item" href="#increment">increment</a>
+      <a class="sidebar-item" href="#arrayInsert">arrayInsert</a>
+      <a class="sidebar-item" href="#arrayRemove">arrayRemove</a>
+      <a class="sidebar-item" href="#fetch">fetch</a>
+      <a class="sidebar-item" href="#asyncGetProfile">asyncGetProfile</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-label">Leaderboard <span class="sidebar-new">new</span></div>
+      <a class="sidebar-item" href="#trackLeaderboard">trackLeaderboard</a>
+      <a class="sidebar-item" href="#getTop">getTop</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-label">Bridge <span class="sidebar-new">new</span></div>
+      <a class="sidebar-item" href="#bridgeOn">bridgeOn</a>
+      <a class="sidebar-item" href="#bridgeSend">bridgeSend</a>
+      <a class="sidebar-item" href="#bridgeSendToPlayer">bridgeSendToPlayer</a>
+      <a class="sidebar-item" href="#bridgeSendToServer">bridgeSendToServer</a>
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <div class="class-header">
+      <h1>DataServiceServer</h1>
+      <p>Server-side API for persistent player data, cross-server messaging, and leaderboards. Wraps ProfileStore with reactive signals, automatic client replication, and built-in OrderedDataStore sync.</p>
+      <div class="class-env">🖥&nbsp; Server &nbsp;·&nbsp; <code>require(DataService).server</code></div>
+    </div>
+
+    <!-- ════════ PLAYER ════════ -->
+    <div class="section-title">Player Management</div>
+
+    <div class="method" id="loadPlayer">
+      <div class="method-header">
+        <span class="method-name">loadPlayer</span>
+        <div class="tags"><span class="tag tag-yields">yields</span></div>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">loadPlayer</span>(<span class="s-p">player</span>: <span class="s-t">Player</span>) <span class="s-op">→</span> <span class="s-ret">void</span></div>
+      <div class="desc">
+        <p>Loads and session-locks a player's profile from the DataStore. Call inside <code>Players.PlayerAdded</code>. Yields until the profile is ready — all other DataService calls assume this has completed.</p>
+        <div class="adm adm-note"><strong>Note:</strong> In <code>useMock</code> mode the call resolves instantly with a blank data table.</div>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">player</span></td><td><span class="pt">Player</span></td><td class="pd">The Roblox Player instance to load.</td></tr>
+        </tbody>
+      </table>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="cmt">-- ServerScriptService</span>
+<span class="kw">local</span> DataService = <span class="fn">require</span>(game.ReplicatedStorage.DataService).server
+
+<span class="fn">Players</span>.PlayerAdded:<span class="fn">Connect</span>(<span class="kw">function</span>(player)
+    <span class="fn">DataService</span>:<span class="fn">loadPlayer</span>(player)
+<span class="kw">end</span>)
+
+<span class="fn">Players</span>.PlayerRemoving:<span class="fn">Connect</span>(<span class="kw">function</span>(player)
+    <span class="fn">DataService</span>:<span class="fn">removePlayer</span>(player)
+<span class="kw">end</span>)</pre>
+      </div>
+    </div>
+
+    <div class="method" id="removePlayer">
+      <div class="method-header">
+        <span class="method-name">removePlayer</span>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">removePlayer</span>(<span class="s-p">player</span>: <span class="s-t">Player</span>) <span class="s-op">→</span> <span class="s-ret">void</span></div>
+      <div class="desc">
+        <p>Saves the player's profile and releases the session lock. Call inside <code>Players.PlayerRemoving</code>.</p>
+        <div class="adm adm-caution"><strong>Caution:</strong> ProfileStore handles cleanup on server shutdown automatically, but always call this explicitly on every remove.</div>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">player</span></td><td><span class="pt">Player</span></td><td class="pd">The Player instance to save and release.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <hr class="divider"/>
+
+    <!-- ════════ DATA ════════ -->
+    <div class="section-title">Data Operations</div>
+
+    <div class="method" id="get">
+      <div class="method-header">
+        <span class="method-name">get</span>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">get</span>(<span class="s-p">player</span>: <span class="s-t">Player</span>, <span class="s-p">path</span><span class="s-opt">?</span>: <span class="s-t">Path</span>) <span class="s-op">→</span> <span class="s-ret">any</span></div>
+      <div class="desc">
+        <p>Returns the player's in-memory data. Omit <code>path</code> for the full data table. <code>path</code> accepts a <strong>string</strong> key or an <strong>array of strings</strong> for nested access.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">player</span></td><td><span class="pt">Player</span></td><td class="pd">The target player.</td></tr>
+          <tr><td><span class="pn">path</span> <span class="po">optional</span></td><td><span class="pt">string | {string}</span></td><td class="pd">Key or nested path. Omit for the full data table.</td></tr>
+        </tbody>
+      </table>
+      <div class="returns"><span class="rl">Returns</span> <span class="rt">any</span></div>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="cmt">-- Full snapshot</span>
+<span class="kw">local</span> data = <span class="fn">DataService</span>:<span class="fn">get</span>(player)
+
+<span class="cmt">-- Single field</span>
+<span class="kw">local</span> coins = <span class="fn">DataService</span>:<span class="fn">get</span>(player, <span class="str">"Coins"</span>)
+
+<span class="cmt">-- Nested path</span>
+<span class="kw">local</span> wins = <span class="fn">DataService</span>:<span class="fn">get</span>(player, {<span class="str">"Stats"</span>, <span class="str">"Wins"</span>})</pre>
+      </div>
+    </div>
+
+    <div class="method" id="set">
+      <div class="method-header">
+        <span class="method-name">set</span>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">set</span>(<span class="s-p">player</span>: <span class="s-t">Player</span>, <span class="s-p">path</span>: <span class="s-t">Path</span>, <span class="s-p">value</span>: <span class="s-t">any</span>, <span class="s-p">dontReplicate</span><span class="s-opt">?</span>: <span class="s-t">boolean</span>) <span class="s-op">→</span> <span class="s-ret">void</span></div>
+      <div class="desc">
+        <p>Writes a value into the player's data at the given path, replicates the change to the client, and automatically updates any leaderboard whose tracked path matches.</p>
+        <div class="adm adm-note"><strong>Auto-sync:</strong> If <code>path</code> is registered with <a href="#trackLeaderboard"><code>trackLeaderboard</code></a> and <code>value</code> is a number, the OrderedDataStore is updated in the background.</div>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">player</span></td><td><span class="pt">Player</span></td><td class="pd">The target player.</td></tr>
+          <tr><td><span class="pn">path</span></td><td><span class="pt">string | {string}</span></td><td class="pd">Key or nested path to set.</td></tr>
+          <tr><td><span class="pn">value</span></td><td><span class="pt">any</span></td><td class="pd">Value to store. Must be JSON-serialisable.</td></tr>
+          <tr><td><span class="pn">dontReplicate</span> <span class="po">optional</span></td><td><span class="pt">boolean</span></td><td class="pd">Skip client replication when <code>true</code>.</td></tr>
+        </tbody>
+      </table>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="fn">DataService</span>:<span class="fn">set</span>(player, <span class="str">"Coins"</span>, <span class="num">500</span>)
+
+<span class="cmt">-- Nested path</span>
+<span class="fn">DataService</span>:<span class="fn">set</span>(player, {<span class="str">"Stats"</span>, <span class="str">"Wins"</span>}, <span class="num">10</span>)
+
+<span class="cmt">-- Server-only write (no replication)</span>
+<span class="fn">DataService</span>:<span class="fn">set</span>(player, <span class="str">"SecretFlag"</span>, <span class="kw">true</span>, <span class="kw">true</span>)</pre>
+      </div>
+    </div>
+
+    <div class="method" id="update">
+      <div class="method-header">
+        <span class="method-name">update</span>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">update</span>(<span class="s-p">player</span>: <span class="s-t">Player</span>, <span class="s-p">path</span>: <span class="s-t">Path</span>, <span class="s-p">fn</span>: <span class="s-t">(current: any) → any</span>) <span class="s-op">→</span> <span class="s-ret">any</span></div>
+      <div class="desc">
+        <p>Reads the current value at <code>path</code>, passes it to <code>fn</code>, then calls <code>set</code> with the returned value. Triggers the same replication and leaderboard sync as <code>set</code>.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">player</span></td><td><span class="pt">Player</span></td><td class="pd">The target player.</td></tr>
+          <tr><td><span class="pn">path</span></td><td><span class="pt">string | {string}</span></td><td class="pd">Path to update.</td></tr>
+          <tr><td><span class="pn">fn</span></td><td><span class="pt">(any) → any</span></td><td class="pd">Receives the current value; must return the new value.</td></tr>
+        </tbody>
+      </table>
+      <div class="returns"><span class="rl">Returns</span> <span class="rt">any</span> — the new value</div>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="kw">local</span> newCoins = <span class="fn">DataService</span>:<span class="fn">update</span>(player, <span class="str">"Coins"</span>, <span class="kw">function</span>(current)
+    <span class="kw">return</span> (current <span class="kw">or</span> <span class="num">0</span>) + <span class="num">100</span>
+<span class="kw">end</span>)</pre>
+      </div>
+    </div>
+
+    <div class="method" id="increment">
+      <div class="method-header">
+        <span class="method-name">increment</span>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">increment</span>(<span class="s-p">player</span>: <span class="s-t">Player</span>, <span class="s-p">path</span>: <span class="s-t">Path</span>, <span class="s-p">amount</span><span class="s-opt">?</span>: <span class="s-t">number</span>) <span class="s-op">→</span> <span class="s-ret">number</span></div>
+      <div class="desc">
+        <p>Adds <code>amount</code> (default <code>1</code>) to the number at <code>path</code>. Shorthand for <code>update</code> with addition. Use a negative value to subtract.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">player</span></td><td><span class="pt">Player</span></td><td class="pd">The target player.</td></tr>
+          <tr><td><span class="pn">path</span></td><td><span class="pt">string | {string}</span></td><td class="pd">Path to the numeric field.</td></tr>
+          <tr><td><span class="pn">amount</span> <span class="po">optional</span></td><td><span class="pt">number</span></td><td class="pd">Amount to add. Defaults to <code>1</code>.</td></tr>
+        </tbody>
+      </table>
+      <div class="returns"><span class="rl">Returns</span> <span class="rt">number</span> — the new value</div>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="fn">DataService</span>:<span class="fn">increment</span>(player, <span class="str">"Coins"</span>, <span class="num">50</span>)  <span class="cmt">-- +50</span>
+<span class="fn">DataService</span>:<span class="fn">increment</span>(player, <span class="str">"Level"</span>)       <span class="cmt">-- +1</span>
+<span class="fn">DataService</span>:<span class="fn">increment</span>(player, <span class="str">"Coins"</span>, <span class="num">-25</span>) <span class="cmt">-- -25</span></pre>
+      </div>
+    </div>
+
+    <div class="method" id="arrayInsert">
+      <div class="method-header">
+        <span class="method-name">arrayInsert</span>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">arrayInsert</span>(<span class="s-p">player</span>: <span class="s-t">Player</span>, <span class="s-p">path</span>: <span class="s-t">Path</span>, <span class="s-p">value</span>: <span class="s-t">any</span>) <span class="s-op">→</span> <span class="s-ret">void</span></div>
+      <div class="desc">
+        <p>Appends <code>value</code> to the array at <code>path</code>. Creates an empty array first if none exists.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">player</span></td><td><span class="pt">Player</span></td><td class="pd">The target player.</td></tr>
+          <tr><td><span class="pn">path</span></td><td><span class="pt">string | {string}</span></td><td class="pd">Path to the array field.</td></tr>
+          <tr><td><span class="pn">value</span></td><td><span class="pt">any</span></td><td class="pd">Value to append.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="method" id="arrayRemove">
+      <div class="method-header">
+        <span class="method-name">arrayRemove</span>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">arrayRemove</span>(<span class="s-p">player</span>: <span class="s-t">Player</span>, <span class="s-p">path</span>: <span class="s-t">Path</span>, <span class="s-p">index</span>: <span class="s-t">number</span>) <span class="s-op">→</span> <span class="s-ret">void</span></div>
+      <div class="desc">
+        <p>Removes the element at <code>index</code> (1-based) from the array at <code>path</code>.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">player</span></td><td><span class="pt">Player</span></td><td class="pd">The target player.</td></tr>
+          <tr><td><span class="pn">path</span></td><td><span class="pt">string | {string}</span></td><td class="pd">Path to the array field.</td></tr>
+          <tr><td><span class="pn">index</span></td><td><span class="pt">number</span></td><td class="pd">1-based index of the element to remove.</td></tr>
+        </tbody>
+      </table>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua — arrayInsert / arrayRemove</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="fn">DataService</span>:<span class="fn">arrayInsert</span>(player, <span class="str">"Inventory"</span>, <span class="str">"Sword"</span>)
+<span class="fn">DataService</span>:<span class="fn">arrayInsert</span>(player, <span class="str">"Inventory"</span>, <span class="str">"Shield"</span>)
+<span class="fn">DataService</span>:<span class="fn">arrayInsert</span>(player, <span class="str">"Inventory"</span>, <span class="str">"Potion"</span>)
+
+<span class="cmt">-- Remove index 2 → { "Sword", "Potion" }</span>
+<span class="fn">DataService</span>:<span class="fn">arrayRemove</span>(player, <span class="str">"Inventory"</span>, <span class="num">2</span>)</pre>
+      </div>
+    </div>
+
+    <div class="method" id="fetch">
+      <div class="method-header">
+        <span class="method-name">fetch</span>
+        <div class="tags"><span class="tag tag-yields">yields</span></div>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">fetch</span>(<span class="s-p">player</span>: <span class="s-t">Player</span>, <span class="s-p">path</span><span class="s-opt">?</span>: <span class="s-t">Path</span>) <span class="s-op">→</span> <span class="s-ret">any</span></div>
+      <div class="desc">
+        <p>Yields until the player's profile is loaded, then returns data at <code>path</code> (or the full table if omitted). Useful in code that runs concurrently with <code>loadPlayer</code>.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">player</span></td><td><span class="pt">Player</span></td><td class="pd">The target player.</td></tr>
+          <tr><td><span class="pn">path</span> <span class="po">optional</span></td><td><span class="pt">string | {string}</span></td><td class="pd">Path to fetch. Omit for the full table.</td></tr>
+        </tbody>
+      </table>
+      <div class="returns"><span class="rl">Returns</span> <span class="rt">any</span></div>
+    </div>
+
+    <div class="method" id="asyncGetProfile">
+      <div class="method-header">
+        <span class="method-name">asyncGetProfile</span>
+        <div class="tags"><span class="tag tag-yields">yields</span></div>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">asyncGetProfile</span>(<span class="s-p">userId</span>: <span class="s-t">number</span>) <span class="s-op">→</span> <span class="s-ret">table?</span></div>
+      <div class="desc">
+        <p>Reads a player's data directly from the DataStore, even if they are not online. Returns <code>nil</code> if no saved data exists. Used internally by <code>getTop</code> to populate <code>extraFields</code>.</p>
+        <div class="adm adm-warning"><strong>Warning:</strong> Makes a live DataStore request each call. Cache results where possible.</div>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">userId</span></td><td><span class="pt">number</span></td><td class="pd">UserId of the player to look up.</td></tr>
+        </tbody>
+      </table>
+      <div class="returns"><span class="rl">Returns</span> <span class="rt">table?</span> — raw data table, or <code>nil</code></div>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="kw">local</span> profile = <span class="fn">DataService</span>:<span class="fn">asyncGetProfile</span>(<span class="num">12345678</span>)
+<span class="kw">if</span> profile <span class="kw">then</span>
+    <span class="fn">print</span>(profile.Coins, profile.Level)
+<span class="kw">end</span></pre>
+      </div>
+    </div>
+    <hr class="divider"/>
+
+    <!-- ════════ LEADERBOARD ════════ -->
+    <div class="section-title">Leaderboard <span class="badge-new">new</span></div>
+
+    <div class="method" id="trackLeaderboard">
+      <div class="method-header">
+        <span class="method-name">trackLeaderboard</span>
+        <div class="tags"><span class="tag tag-new">new</span></div>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">trackLeaderboard</span>(<span class="s-p">key</span>: <span class="s-t">string</span>, <span class="s-p">path</span>: <span class="s-t">Path</span>) <span class="s-op">→</span> <span class="s-ret">void</span></div>
+      <div class="desc">
+        <p>Binds a leaderboard key to a data path. Every subsequent <code>set</code> or <code>update</code> that writes a <strong>number</strong> to that path automatically updates the corresponding OrderedDataStore — no extra call required.</p>
+        <p>Multiple leaderboards can track different paths simultaneously. Call once during server init, before players join.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">key</span></td><td><span class="pt">string</span></td><td class="pd">Unique leaderboard name (also the OrderedDataStore name).</td></tr>
+          <tr><td><span class="pn">path</span></td><td><span class="pt">string | {string}</span></td><td class="pd">Data path whose numeric value drives the leaderboard.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="method" id="getTop">
+      <div class="method-header">
+        <span class="method-name">getTop</span>
+        <div class="tags"><span class="tag tag-new">new</span><span class="tag tag-yields">yields</span></div>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">getTop</span>(<span class="s-p">key</span>: <span class="s-t">string</span>, <span class="s-p">count</span>: <span class="s-t">number</span>, <span class="s-p">extraFields</span><span class="s-opt">?</span>: <span class="s-t">{string}</span>) <span class="s-op">→</span> <span class="s-ret">{LeaderboardEntry}</span></div>
+      <div class="desc">
+        <p>Returns the top <code>count</code> entries sorted descending by score. When <code>extraFields</code> is provided, each entry is enriched with those data keys fetched concurrently via <code>asyncGetProfile</code>.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">key</span></td><td><span class="pt">string</span></td><td class="pd">The leaderboard key.</td></tr>
+          <tr><td><span class="pn">count</span></td><td><span class="pt">number</span></td><td class="pd">Max entries to return (up to 100 per OrderedDataStore page).</td></tr>
+          <tr><td><span class="pn">extraFields</span> <span class="po">optional</span></td><td><span class="pt">{string}</span></td><td class="pd">Extra data keys to attach to each entry, e.g. <code>{"Name", "Level"}</code>.</td></tr>
+        </tbody>
+      </table>
+      <div class="returns"><span class="rl">Returns</span> <span class="rt">{LeaderboardEntry}</span></div>
+      <table class="param-table" style="margin-top:10px">
+        <thead><tr><th>Entry field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">rank</span></td><td><span class="pt">number</span></td><td class="pd">Position (1 = highest score).</td></tr>
+          <tr><td><span class="pn">userId</span></td><td><span class="pt">number</span></td><td class="pd">Player's UserId.</td></tr>
+          <tr><td><span class="pn">score</span></td><td><span class="pt">number</span></td><td class="pd">The tracked value.</td></tr>
+          <tr><td><span class="pn">...<em>extraFields</em></span></td><td><span class="pt">any</span></td><td class="pd">Any additional keys you requested.</td></tr>
+        </tbody>
+      </table>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua — trackLeaderboard + getTop</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="cmt">-- Server init</span>
+<span class="fn">DataService</span>:<span class="fn">trackLeaderboard</span>(<span class="str">"richest"</span>, <span class="str">"Coins"</span>)
+<span class="fn">DataService</span>:<span class="fn">trackLeaderboard</span>(<span class="str">"topLevel"</span>, <span class="str">"Level"</span>)
+
+<span class="cmt">-- set() now auto-updates OrderedDataStore</span>
+<span class="fn">DataService</span>:<span class="fn">set</span>(player, <span class="str">"Coins"</span>, <span class="num">1500</span>)
+
+<span class="cmt">-- Fetch top 10, include Name and Level from each profile</span>
+<span class="kw">local</span> top = <span class="fn">DataService</span>:<span class="fn">getTop</span>(<span class="str">"richest"</span>, <span class="num">10</span>, {<span class="str">"Name"</span>, <span class="str">"Level"</span>})
+<span class="kw">for</span> _, entry <span class="kw">in</span> <span class="fn">ipairs</span>(top) <span class="kw">do</span>
+    <span class="fn">print</span>(entry.rank, entry.Name, entry.score, entry.Level)
+<span class="kw">end</span></pre>
+      </div>
+    </div>
+    <hr class="divider"/>
+
+    <!-- ════════ BRIDGE ════════ -->
+    <div class="section-title">Bridge <span class="badge-new">new</span></div>
+
+    <div class="desc" style="margin-bottom:20px">
+      <p>Cross-server communication via <code>MessagingService</code>. All bridge methods are no-ops in <code>useMock</code> mode.</p>
+    </div>
+
+    <div class="method" id="bridgeOn">
+      <div class="method-header">
+        <span class="method-name">bridgeOn</span>
+        <div class="tags"><span class="tag tag-new">new</span></div>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">bridgeOn</span>(<span class="s-p">key</span>: <span class="s-t">string</span>, <span class="s-p">callback</span>: <span class="s-t">(data: any, player: Player?) → ()</span>) <span class="s-op">→</span> <span class="s-ret">void</span></div>
+      <div class="desc">
+        <p>Registers a handler for incoming bridge messages. <code>player</code> is non-nil only when the sender used <code>bridgeSendToPlayer</code> and that player is online in this server.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">key</span></td><td><span class="pt">string</span></td><td class="pd">Message channel name.</td></tr>
+          <tr><td><span class="pn">callback</span></td><td><span class="pt">function</span></td><td class="pd">Called with <code>(data, player?)</code> when a message arrives.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="method" id="bridgeSend">
+      <div class="method-header">
+        <span class="method-name">bridgeSend</span>
+        <div class="tags"><span class="tag tag-new">new</span></div>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">bridgeSend</span>(<span class="s-p">key</span>: <span class="s-t">string</span>, <span class="s-p">data</span>: <span class="s-t">any</span>) <span class="s-op">→</span> <span class="s-ret">void</span></div>
+      <div class="desc">
+        <p>Broadcasts a message to <strong>all</strong> game servers (including the sender) via <code>MessagingService</code>.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">key</span></td><td><span class="pt">string</span></td><td class="pd">Message channel name.</td></tr>
+          <tr><td><span class="pn">data</span></td><td><span class="pt">any</span></td><td class="pd">Payload — must be JSON-serialisable.</td></tr>
+        </tbody>
+      </table>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua — bridgeOn + bridgeSend</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="cmt">-- Listen</span>
+<span class="fn">DataService</span>:<span class="fn">bridgeOn</span>(<span class="str">"announcement"</span>, <span class="kw">function</span>(data, player)
+    <span class="fn">print</span>(<span class="str">"Received:"</span>, data.message)
+<span class="kw">end</span>)
+
+<span class="cmt">-- Broadcast to all servers</span>
+<span class="fn">DataService</span>:<span class="fn">bridgeSend</span>(<span class="str">"announcement"</span>, { message = <span class="str">"Event started!"</span> })</pre>
+      </div>
+    </div>
+
+    <div class="method" id="bridgeSendToPlayer">
+      <div class="method-header">
+        <span class="method-name">bridgeSendToPlayer</span>
+        <div class="tags"><span class="tag tag-new">new</span></div>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">bridgeSendToPlayer</span>(<span class="s-p">userId</span>: <span class="s-t">number</span>, <span class="s-p">key</span>: <span class="s-t">string</span>, <span class="s-p">data</span>: <span class="s-t">any</span>) <span class="s-op">→</span> <span class="s-ret">void</span></div>
+      <div class="desc">
+        <p>Broadcasts a message only handled by the server where the target player is currently playing. Other servers silently ignore it.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">userId</span></td><td><span class="pt">number</span></td><td class="pd">UserId of the target player.</td></tr>
+          <tr><td><span class="pn">key</span></td><td><span class="pt">string</span></td><td class="pd">Message channel name.</td></tr>
+          <tr><td><span class="pn">data</span></td><td><span class="pt">any</span></td><td class="pd">Payload — must be JSON-serialisable.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="method" id="bridgeSendToServer">
+      <div class="method-header">
+        <span class="method-name">bridgeSendToServer</span>
+        <div class="tags"><span class="tag tag-new">new</span></div>
+      </div>
+      <div class="sig"><span class="s-fn">DataService</span><span class="s-op">:</span><span class="s-fn">bridgeSendToServer</span>(<span class="s-p">jobId</span>: <span class="s-t">string</span>, <span class="s-p">key</span>: <span class="s-t">string</span>, <span class="s-p">data</span>: <span class="s-t">any</span>) <span class="s-op">→</span> <span class="s-ret">void</span></div>
+      <div class="desc">
+        <p>Sends a message to a <strong>specific server</strong> by its <code>game.JobId</code>. All other servers silently ignore the message.</p>
+      </div>
+      <table class="param-table">
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pn">jobId</span></td><td><span class="pt">string</span></td><td class="pd">The <code>game.JobId</code> of the target server.</td></tr>
+          <tr><td><span class="pn">key</span></td><td><span class="pt">string</span></td><td class="pd">Message channel name.</td></tr>
+          <tr><td><span class="pn">data</span></td><td><span class="pt">any</span></td><td class="pd">Payload — must be JSON-serialisable.</td></tr>
+        </tbody>
+      </table>
+      <div class="example">
+        <div class="example-header">
+          <span class="example-label">Lua — targeted bridge</span>
+          <button class="btn btn-copy">Copy</button>
+        </div>
+        <pre class="example-display"><span class="cmt">-- Send to a specific server by JobId</span>
+<span class="fn">DataService</span>:<span class="fn">bridgeSendToServer</span>(otherJobId, <span class="str">"syncScore"</span>, {
+    userId = player.UserId,
+    score  = <span class="fn">DataService</span>:<span class="fn">get</span>(player, <span class="str">"Coins"</span>),
+})
+
+<span class="cmt">-- Route to whichever server a player is on</span>
+<span class="fn">DataService</span>:<span class="fn">bridgeSendToPlayer</span>(player.UserId, <span class="str">"reward"</span>, {
+    item = <span class="str">"GoldenSword"</span>,
+})</pre>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../runtime.js"></script>
+</body>
+</html>
